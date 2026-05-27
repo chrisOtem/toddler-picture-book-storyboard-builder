@@ -2,6 +2,209 @@ import React, { useState } from 'react';
 import { BookOpen, Loader2, Baby, Palette, AudioLines, Pencil, Upload, Download, Plus, Trash2 } from 'lucide-react';
 import JSZip from 'jszip';
 
+type ColorSchemeId = 'sunshine' | 'bedtime' | 'forest' | 'ocean' | 'candy' | 'lavender';
+
+interface ColorScheme {
+  id: ColorSchemeId;
+  label: string;
+  description: string;
+  swatches: string[];
+  exportVars: Record<string, string>;
+}
+
+const COLOR_SCHEMES: ColorScheme[] = [
+  {
+    id: 'sunshine',
+    label: '陽光暖橙',
+    description: '溫暖、開朗，適合日常、友情與冒險故事。',
+    swatches: ['#fbbf24', '#f97316', '#92400e'],
+    exportVars: {
+      paper: '#fffdf6',
+      paperEdge: '#f4d99b',
+      ink: '#78350f',
+      muted: '#a16207',
+      textStrong: '#451a03',
+      background: '#fdf7e8',
+      backgroundStart: '#fff7ed',
+      backgroundEnd: '#fff1f2',
+      coverBase: '#fff7d6',
+      storyPanelStart: '#ffffff',
+      storyPanelEnd: '#fffaf0',
+      accent: '#d97706',
+      accentStrong: '#92400e',
+      accentSoft: '#fcd34d',
+      glowPrimary: 'rgba(253, 230, 138, 0.55)',
+      glowCoverOne: 'rgba(251, 191, 36, 0.32)',
+      glowCoverTwo: 'rgba(251, 146, 60, 0.22)',
+      borderTint: 'rgba(217, 119, 6, 0.18)',
+      sideTint: 'rgba(146, 64, 14, 0.08)',
+      shadowTint: 'rgba(120, 53, 15, 0.12)',
+      paperShadow: 'rgba(120, 53, 15, 0.1)',
+      controlsBg: 'rgba(255, 251, 235, 0.92)',
+    },
+  },
+  {
+    id: 'bedtime',
+    label: '睡前星藍',
+    description: '安靜、柔和，適合睡前、月亮與星空故事。',
+    swatches: ['#93c5fd', '#4f46e5', '#1e1b4b'],
+    exportVars: {
+      paper: '#f8fbff',
+      paperEdge: '#bfdbfe',
+      ink: '#1e3a8a',
+      muted: '#3b82f6',
+      textStrong: '#172554',
+      background: '#eef6ff',
+      backgroundStart: '#eff6ff',
+      backgroundEnd: '#f5f3ff',
+      coverBase: '#eaf3ff',
+      storyPanelStart: '#ffffff',
+      storyPanelEnd: '#eff6ff',
+      accent: '#2563eb',
+      accentStrong: '#1e3a8a',
+      accentSoft: '#93c5fd',
+      glowPrimary: 'rgba(147, 197, 253, 0.48)',
+      glowCoverOne: 'rgba(125, 211, 252, 0.26)',
+      glowCoverTwo: 'rgba(165, 180, 252, 0.28)',
+      borderTint: 'rgba(37, 99, 235, 0.2)',
+      sideTint: 'rgba(30, 64, 175, 0.08)',
+      shadowTint: 'rgba(30, 58, 138, 0.14)',
+      paperShadow: 'rgba(30, 58, 138, 0.1)',
+      controlsBg: 'rgba(239, 246, 255, 0.94)',
+    },
+  },
+  {
+    id: 'forest',
+    label: '森林自然綠',
+    description: '自然、清新，適合動物、森林與成長故事。',
+    swatches: ['#86efac', '#16a34a', '#14532d'],
+    exportVars: {
+      paper: '#fbfff8',
+      paperEdge: '#bbf7d0',
+      ink: '#166534',
+      muted: '#15803d',
+      textStrong: '#052e16',
+      background: '#f0fdf4',
+      backgroundStart: '#f7fee7',
+      backgroundEnd: '#ecfdf5',
+      coverBase: '#f0fdf4',
+      storyPanelStart: '#ffffff',
+      storyPanelEnd: '#f0fdf4',
+      accent: '#16a34a',
+      accentStrong: '#166534',
+      accentSoft: '#86efac',
+      glowPrimary: 'rgba(187, 247, 208, 0.55)',
+      glowCoverOne: 'rgba(134, 239, 172, 0.34)',
+      glowCoverTwo: 'rgba(74, 222, 128, 0.22)',
+      borderTint: 'rgba(22, 163, 74, 0.2)',
+      sideTint: 'rgba(20, 83, 45, 0.08)',
+      shadowTint: 'rgba(20, 83, 45, 0.13)',
+      paperShadow: 'rgba(20, 83, 45, 0.1)',
+      controlsBg: 'rgba(240, 253, 244, 0.94)',
+    },
+  },
+  {
+    id: 'ocean',
+    label: '海洋清爽藍',
+    description: '明亮、開闊，適合海邊、探索與旅程故事。',
+    swatches: ['#67e8f9', '#0891b2', '#164e63'],
+    exportVars: {
+      paper: '#f8feff',
+      paperEdge: '#a5f3fc',
+      ink: '#155e75',
+      muted: '#0891b2',
+      textStrong: '#083344',
+      background: '#ecfeff',
+      backgroundStart: '#f0fdfa',
+      backgroundEnd: '#e0f2fe',
+      coverBase: '#ecfeff',
+      storyPanelStart: '#ffffff',
+      storyPanelEnd: '#ecfeff',
+      accent: '#0891b2',
+      accentStrong: '#155e75',
+      accentSoft: '#67e8f9',
+      glowPrimary: 'rgba(103, 232, 249, 0.42)',
+      glowCoverOne: 'rgba(34, 211, 238, 0.3)',
+      glowCoverTwo: 'rgba(56, 189, 248, 0.22)',
+      borderTint: 'rgba(8, 145, 178, 0.2)',
+      sideTint: 'rgba(22, 78, 99, 0.08)',
+      shadowTint: 'rgba(22, 78, 99, 0.13)',
+      paperShadow: 'rgba(22, 78, 99, 0.1)',
+      controlsBg: 'rgba(236, 254, 255, 0.94)',
+    },
+  },
+  {
+    id: 'candy',
+    label: '糖果柔粉',
+    description: '可愛、甜美，適合生日、朋友與幻想故事。',
+    swatches: ['#f9a8d4', '#ec4899', '#831843'],
+    exportVars: {
+      paper: '#fff8fc',
+      paperEdge: '#fbcfe8',
+      ink: '#9d174d',
+      muted: '#db2777',
+      textStrong: '#500724',
+      background: '#fdf2f8',
+      backgroundStart: '#fff1f2',
+      backgroundEnd: '#fdf2f8',
+      coverBase: '#fff1f8',
+      storyPanelStart: '#ffffff',
+      storyPanelEnd: '#fdf2f8',
+      accent: '#db2777',
+      accentStrong: '#9d174d',
+      accentSoft: '#f9a8d4',
+      glowPrimary: 'rgba(249, 168, 212, 0.46)',
+      glowCoverOne: 'rgba(244, 114, 182, 0.28)',
+      glowCoverTwo: 'rgba(251, 207, 232, 0.34)',
+      borderTint: 'rgba(219, 39, 119, 0.2)',
+      sideTint: 'rgba(157, 23, 77, 0.08)',
+      shadowTint: 'rgba(131, 24, 67, 0.13)',
+      paperShadow: 'rgba(131, 24, 67, 0.1)',
+      controlsBg: 'rgba(253, 242, 248, 0.94)',
+    },
+  },
+  {
+    id: 'lavender',
+    label: '夢幻薰衣草',
+    description: '夢幻、溫柔，適合魔法、想像與療癒故事。',
+    swatches: ['#c4b5fd', '#8b5cf6', '#4c1d95'],
+    exportVars: {
+      paper: '#fdfbff',
+      paperEdge: '#ddd6fe',
+      ink: '#5b21b6',
+      muted: '#7c3aed',
+      textStrong: '#2e1065',
+      background: '#f5f3ff',
+      backgroundStart: '#faf5ff',
+      backgroundEnd: '#eef2ff',
+      coverBase: '#f5f3ff',
+      storyPanelStart: '#ffffff',
+      storyPanelEnd: '#f5f3ff',
+      accent: '#7c3aed',
+      accentStrong: '#5b21b6',
+      accentSoft: '#c4b5fd',
+      glowPrimary: 'rgba(196, 181, 253, 0.48)',
+      glowCoverOne: 'rgba(167, 139, 250, 0.28)',
+      glowCoverTwo: 'rgba(216, 180, 254, 0.3)',
+      borderTint: 'rgba(124, 58, 237, 0.2)',
+      sideTint: 'rgba(76, 29, 149, 0.08)',
+      shadowTint: 'rgba(76, 29, 149, 0.13)',
+      paperShadow: 'rgba(76, 29, 149, 0.1)',
+      controlsBg: 'rgba(245, 243, 255, 0.94)',
+    },
+  },
+];
+
+const DEFAULT_COLOR_SCHEME_ID: ColorSchemeId = 'sunshine';
+
+const getColorScheme = (id: string): ColorScheme =>
+  COLOR_SCHEMES.find(scheme => scheme.id === id) || COLOR_SCHEMES[0];
+
+const buildExportThemeVars = (scheme: ColorScheme) =>
+  Object.entries(scheme.exportVars)
+    .map(([key, value]) => `      --${key.replace(/[A-Z]/g, match => `-${match.toLowerCase()}`)}: ${value};`)
+    .join('\n');
+
 interface Page {
   pageNumber: number;
   storyText: string;
@@ -15,6 +218,7 @@ interface StoryBook {
   title: string;
   theme: string;
   language: string;
+  colorScheme: ColorSchemeId;
   pages: Page[];
 }
 
@@ -59,6 +263,7 @@ export default function App() {
   const [theme, setTheme] = useState('自由創作');
   const [pages, setPages] = useState(DEFAULT_PAGE_COUNT);
   const [language, setLanguage] = useState('粵語');
+  const [colorSchemeId, setColorSchemeId] = useState<ColorSchemeId>(DEFAULT_COLOR_SCHEME_ID);
   const [isExporting, setIsExporting] = useState(false);
   const [story, setStory] = useState<StoryBook | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -76,11 +281,12 @@ export default function App() {
       title: title.trim() || '我的自訂繪本',
       theme: theme.trim() || '自由創作',
       language,
+      colorScheme: colorSchemeId,
       pages: Array.from({ length: pages }).map((_, index) => emptyPage(index + 1)),
     });
   };
 
-  const updateStoryMeta = (field: keyof Pick<StoryBook, 'title' | 'theme' | 'language'>, value: string) => {
+  const updateStoryMeta = (field: keyof Pick<StoryBook, 'title' | 'theme' | 'language' | 'colorScheme'>, value: string) => {
     setStory(prev => (prev ? { ...prev, [field]: value } : prev));
   };
 
@@ -213,6 +419,9 @@ export default function App() {
 
       const safeTitle = escapeHtml(story.title || '我的自訂繪本');
       const safeTheme = escapeHtml(story.theme || '自由創作');
+      const selectedColorScheme = getColorScheme(story.colorScheme);
+      const safeColorSchemeLabel = escapeHtml(selectedColorScheme.label);
+      const exportThemeVars = buildExportThemeVars(selectedColorScheme);
       const contentPageCount = story.pages.length;
       const totalSlides = contentPageCount + 1;
 
@@ -225,11 +434,7 @@ export default function App() {
   <style>
     :root {
       color-scheme: light;
-      --paper: #fffdf6;
-      --paper-edge: #f4d99b;
-      --ink: #78350f;
-      --muted: #a16207;
-      --background: #fdf7e8;
+${exportThemeVars}
     }
     * { box-sizing: border-box; }
     body {
@@ -238,8 +443,8 @@ export default function App() {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       color: var(--ink);
       background:
-        radial-gradient(circle at top left, rgba(253, 230, 138, 0.55), transparent 34rem),
-        linear-gradient(135deg, #fff7ed 0%, var(--background) 48%, #fff1f2 100%);
+        radial-gradient(circle at top left, var(--glow-primary), transparent 34rem),
+        linear-gradient(135deg, var(--background-start) 0%, var(--background) 48%, var(--background-end) 100%);
       display: flex;
       justify-content: center;
       padding: 22px 14px;
@@ -250,13 +455,13 @@ export default function App() {
       gap: 14px;
     }
     .book-stage, .controls {
-      border: 1px solid rgba(217, 119, 6, 0.18);
-      box-shadow: 0 24px 60px rgba(120, 53, 15, 0.12);
+      border: 1px solid var(--border-tint);
+      box-shadow: 0 24px 60px var(--shadow-tint);
     }
     .book-stage {
       position: relative;
       min-height: 82vh;
-      background: linear-gradient(90deg, rgba(146, 64, 14, 0.08), transparent 7%, transparent 93%, rgba(146, 64, 14, 0.08)), #fffdf7;
+      background: linear-gradient(90deg, var(--side-tint), transparent 7%, transparent 93%, var(--side-tint)), var(--paper);
       border-radius: 34px;
       overflow: hidden;
       perspective: 1600px;
@@ -286,7 +491,7 @@ export default function App() {
       border: 1px solid var(--paper-edge);
       border-radius: 28px;
       overflow: hidden;
-      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7), 0 20px 45px rgba(120, 53, 15, 0.1);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7), 0 20px 45px var(--paper-shadow);
     }
     .cover-paper {
       display: flex;
@@ -296,16 +501,16 @@ export default function App() {
       text-align: center;
       padding: clamp(28px, 6vw, 78px);
       background:
-        radial-gradient(circle at 18% 22%, rgba(251, 191, 36, 0.32), transparent 18rem),
-        radial-gradient(circle at 84% 72%, rgba(251, 146, 60, 0.22), transparent 18rem),
-        #fff7d6;
+        radial-gradient(circle at 18% 22%, var(--glow-cover-one), transparent 18rem),
+        radial-gradient(circle at 84% 72%, var(--glow-cover-two), transparent 18rem),
+        var(--cover-base);
     }
     .cover-paper h1 {
       margin: 0 0 20px;
       font-size: clamp(2.8rem, 9vw, 6.7rem);
       line-height: 1.05;
       letter-spacing: 0.04em;
-      color: #92400e;
+      color: var(--accent-strong);
     }
     .cover-paper p { margin: 8px 0; color: var(--muted); font-size: clamp(1rem, 2.4vw, 1.45rem); font-weight: 800; }
     .story-paper {
@@ -327,12 +532,12 @@ export default function App() {
       display: block;
       background: white;
     }
-    .placeholder { color: #b45309; font-size: clamp(1.35rem, 3vw, 2.2rem); font-weight: 900; opacity: 0.55; }
+    .placeholder { color: var(--muted); font-size: clamp(1.35rem, 3vw, 2.2rem); font-weight: 900; opacity: 0.55; }
     .story-area {
       text-align: center;
       padding: clamp(12px, 1.8vw, 22px) clamp(18px, 4vw, 58px);
-      background: linear-gradient(180deg, #ffffff 0%, #fffaf0 100%);
-      border-top: 1px solid rgba(217, 119, 6, 0.16);
+      background: linear-gradient(180deg, var(--story-panel-start) 0%, var(--story-panel-end) 100%);
+      border-top: 1px solid var(--border-tint);
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -351,7 +556,7 @@ export default function App() {
       font-size: clamp(0.95rem, 2vw, 1.45rem);
       line-height: 1.34;
       font-weight: 650;
-      color: #451a03;
+      color: var(--text-strong);
       overflow: hidden;
       overflow-wrap: anywhere;
       word-break: break-word;
@@ -361,7 +566,7 @@ export default function App() {
     .audio-missing { color: #d6a75d; font-size: 0.95rem; font-weight: 700; flex: 0 0 auto; }
     .muted { color: #a8a29e; }
     .controls {
-      background: rgba(255, 251, 235, 0.92);
+      background: var(--controls-bg);
       border-radius: 999px;
       padding: 12px;
       display: grid;
@@ -376,12 +581,12 @@ export default function App() {
       font-size: 1rem;
       font-weight: 900;
       color: white;
-      background: #d97706;
+      background: var(--accent);
       cursor: pointer;
       box-shadow: 0 8px 18px rgba(217, 119, 6, 0.22);
     }
-    button:disabled { background: #fcd34d; cursor: not-allowed; box-shadow: none; }
-    .page-status { text-align: center; color: #92400e; font-weight: 900; min-width: 160px; }
+    button:disabled { background: var(--accent-soft); cursor: not-allowed; box-shadow: none; }
+    .page-status { text-align: center; color: var(--accent-strong); font-weight: 900; min-width: 160px; }
     @media (max-width: 720px) {
       body { padding: 10px 8px; }
       .book-stage { min-height: 80vh; border-radius: 24px; }
@@ -403,6 +608,7 @@ export default function App() {
           <h1>${safeTitle}</h1>
           <p>${safeTheme}</p>
           <p>${escapeHtml(story.language)}</p>
+          <p>色系：${safeColorSchemeLabel}</p>
         </div>
       </article>
       ${htmlPages}
@@ -502,6 +708,10 @@ export default function App() {
         title: story.title,
         theme: story.theme,
         language: story.language,
+        colorScheme: {
+          id: selectedColorScheme.id,
+          label: selectedColorScheme.label,
+        },
         exportedAt: new Date().toISOString(),
         pages: manifestPages,
       };
@@ -510,7 +720,7 @@ export default function App() {
       storyboardFolder?.file('storyboard.json', JSON.stringify(storyboardData, null, 2));
       storyboardFolder?.file(
         'storyboard.md',
-        `# ${story.title || '我的自訂繪本'}\n\n主題：${story.theme || '自由創作'}\n\n語言：${story.language}\n\n` +
+        `# ${story.title || '我的自訂繪本'}\n\n主題：${story.theme || '自由創作'}\n\n語言：${story.language}\n\n色系：${selectedColorScheme.label}\n\n` +
           story.pages
             .map(
               page =>
@@ -535,6 +745,8 @@ export default function App() {
       setIsExporting(false);
     }
   };
+
+  const currentColorScheme = getColorScheme(colorSchemeId);
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] text-slate-800 font-sans p-4 sm:p-8">
@@ -603,6 +815,27 @@ export default function App() {
                 </select>
               </div>
             </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-slate-700 ml-1">輸出繪本色系</label>
+              <select
+                value={colorSchemeId}
+                onChange={event => setColorSchemeId(event.target.value as ColorSchemeId)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-all appearance-none"
+              >
+                {COLOR_SCHEMES.map(scheme => (
+                  <option key={scheme.id} value={scheme.id}>{scheme.label}</option>
+                ))}
+              </select>
+              <div className="flex items-center gap-2 rounded-2xl bg-slate-50 border border-slate-100 p-3">
+                <div className="flex gap-1.5">
+                  {currentColorScheme.swatches.map(color => (
+                    <span key={color} className="h-6 w-6 rounded-full border border-white shadow-sm" style={{ backgroundColor: color }} />
+                  ))}
+                </div>
+                <p className="text-xs leading-relaxed text-slate-500">{currentColorScheme.description}</p>
+              </div>
+            </div>
           </div>
 
           {error && (
@@ -668,17 +901,29 @@ export default function App() {
                     </button>
                   </div>
                   <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-                    <select
-                      value={story.language}
-                      onChange={event => updateStoryMeta('language', event.target.value)}
-                      className="bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                    >
-                      <option value="粵語">粵語</option>
-                      <option value="繁體中文">繁體中文</option>
-                      <option value="简体中文">简体中文</option>
-                      <option value="English">English</option>
-                      <option value="日本語">日本語</option>
-                    </select>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <select
+                        value={story.language}
+                        onChange={event => updateStoryMeta('language', event.target.value)}
+                        className="bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                      >
+                        <option value="粵語">粵語</option>
+                        <option value="繁體中文">繁體中文</option>
+                        <option value="简体中文">简体中文</option>
+                        <option value="English">English</option>
+                        <option value="日本語">日本語</option>
+                      </select>
+                      <select
+                        value={story.colorScheme}
+                        onChange={event => updateStoryMeta('colorScheme', event.target.value)}
+                        className="bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                        aria-label="輸出繪本色系"
+                      >
+                        {COLOR_SCHEMES.map(scheme => (
+                          <option key={scheme.id} value={scheme.id}>色系：{scheme.label}</option>
+                        ))}
+                      </select>
+                    </div>
                     <button
                       onClick={addPage}
                       className="bg-white border-2 border-slate-200 hover:bg-slate-50 hover:border-slate-300 text-slate-700 rounded-xl px-4 py-2 font-bold transition-all shadow-sm flex items-center justify-center gap-2"
