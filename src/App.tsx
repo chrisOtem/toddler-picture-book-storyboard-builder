@@ -204,7 +204,7 @@ export default function App() {
               </div>
               <div class="story-area">
                 <div class="story-text">${safeStoryText || '<span class="muted">尚未填寫故事文本</span>'}</div>
-                ${audioSrc ? `<audio class="audio-player" controls preload="metadata" src="${audioSrc}"></audio>` : '<div class="audio-missing">本頁未上傳配音</div>'}
+                ${audioSrc ? `<audio class="audio-player" controls preload="metadata" playsinline src="${audioSrc}"></audio>` : '<div class="audio-missing">本頁未上傳配音</div>'}
               </div>
             </div>
           </article>
@@ -310,7 +310,7 @@ export default function App() {
     .cover-paper p { margin: 8px 0; color: var(--muted); font-size: clamp(1rem, 2.4vw, 1.45rem); font-weight: 800; }
     .story-paper {
       display: grid;
-      grid-template-rows: minmax(0, 74%) minmax(150px, 26%);
+      grid-template-rows: minmax(0, 76%) minmax(130px, 24%);
     }
     .illustration-area {
       background: #fff;
@@ -330,26 +330,35 @@ export default function App() {
     .placeholder { color: #b45309; font-size: clamp(1.35rem, 3vw, 2.2rem); font-weight: 900; opacity: 0.55; }
     .story-area {
       text-align: center;
-      padding: clamp(16px, 2.6vw, 30px) clamp(18px, 4vw, 58px);
+      padding: clamp(12px, 1.8vw, 22px) clamp(18px, 4vw, 58px);
       background: linear-gradient(180deg, #ffffff 0%, #fffaf0 100%);
       border-top: 1px solid rgba(217, 119, 6, 0.16);
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      gap: 14px;
+      gap: 8px;
+      min-height: 0;
+      overflow: hidden;
     }
     .story-text {
-      max-width: 900px;
+      width: min(920px, 100%);
+      flex: 1 1 auto;
+      min-height: 0;
+      max-height: 100%;
       margin: 0 auto;
-      font-size: clamp(1.28rem, 3.3vw, 2.2rem);
-      line-height: 1.55;
+      padding: 2px 8px;
+      font-size: clamp(0.95rem, 2vw, 1.45rem);
+      line-height: 1.34;
       font-weight: 650;
       color: #451a03;
+      overflow: hidden;
+      overflow-wrap: anywhere;
       word-break: break-word;
     }
-    .audio-player { width: min(520px, 100%); height: 40px; }
-    .audio-missing { color: #d6a75d; font-size: 0.95rem; font-weight: 700; }
+    .story-text.scrollable { overflow-y: auto; }
+    .audio-player { width: min(500px, 100%); height: 34px; flex: 0 0 34px; }
+    .audio-missing { color: #d6a75d; font-size: 0.95rem; font-weight: 700; flex: 0 0 auto; }
     .muted { color: #a8a29e; }
     .controls {
       background: rgba(255, 251, 235, 0.92);
@@ -378,8 +387,9 @@ export default function App() {
       .book-stage { min-height: 80vh; border-radius: 24px; }
       .book-page { padding: 10px; }
       .paper { min-height: calc(80vh - 20px); border-radius: 20px; }
-      .story-paper { grid-template-rows: minmax(0, 70%) minmax(160px, 30%); }
-      .story-area { padding: 18px 14px 22px; }
+      .story-paper { grid-template-rows: minmax(0, 74%) minmax(120px, 26%); }
+      .story-area { padding: 12px 12px 16px; }
+      .story-text { font-size: clamp(0.9rem, 4.2vw, 1.18rem); line-height: 1.36; }
       .controls { grid-template-columns: 1fr; border-radius: 24px; }
       .page-status { order: -1; }
     }
@@ -412,9 +422,55 @@ export default function App() {
     const currentPageLabel = document.getElementById('currentPage');
     let currentIndex = 0;
 
-    function showPage(nextIndex, direction = 'forward') {
+    function pauseAllAudio() {
+      document.querySelectorAll('audio').forEach(audio => {
+        audio.pause();
+      });
+    }
+
+    function fitStoryText(page) {
+      const text = page.querySelector('.story-text');
+      if (!text) return;
+
+      text.classList.remove('scrollable');
+      text.style.fontSize = '';
+
+      const computed = window.getComputedStyle(text);
+      let fontSize = Number.parseFloat(computed.fontSize) || 18;
+      const minimumFontSize = 11;
+      let guard = 0;
+
+      while ((text.scrollHeight > text.clientHeight + 1 || text.scrollWidth > text.clientWidth + 1) && fontSize > minimumFontSize && guard < 40) {
+        fontSize -= 1;
+        text.style.fontSize = fontSize + 'px';
+        guard += 1;
+      }
+
+      if (text.scrollHeight > text.clientHeight + 1) {
+        text.classList.add('scrollable');
+      }
+    }
+
+    function playPageAudio(page, resetToStart = true) {
+      const audio = page.querySelector('audio');
+      if (!audio) return;
+
+      if (resetToStart) {
+        try { audio.currentTime = 0; } catch (error) {}
+      }
+
+      const playPromise = audio.play();
+      if (playPromise && typeof playPromise.catch === 'function') {
+        playPromise.catch(() => {
+          // 瀏覽器若阻擋自動播放，仍保留播放器讓使用者手動播放與拖拉。
+        });
+      }
+    }
+
+    function showPage(nextIndex, direction = 'forward', shouldTryAudio = true) {
       if (!pages.length) return;
       currentIndex = Math.max(0, Math.min(nextIndex, pages.length - 1));
+      pauseAllAudio();
       pages.forEach((page, index) => {
         page.classList.toggle('active', index === currentIndex);
         page.classList.toggle('turning-back', direction === 'back');
@@ -422,15 +478,22 @@ export default function App() {
       currentPageLabel.textContent = String(currentIndex + 1);
       prevButton.disabled = currentIndex === 0;
       nextButton.disabled = currentIndex === pages.length - 1;
+
+      const activePage = pages[currentIndex];
+      window.requestAnimationFrame(() => {
+        fitStoryText(activePage);
+        if (shouldTryAudio) playPageAudio(activePage);
+      });
     }
 
-    prevButton.addEventListener('click', () => showPage(currentIndex - 1, 'back'));
-    nextButton.addEventListener('click', () => showPage(currentIndex + 1, 'forward'));
+    prevButton.addEventListener('click', () => showPage(currentIndex - 1, 'back', true));
+    nextButton.addEventListener('click', () => showPage(currentIndex + 1, 'forward', true));
     document.addEventListener('keydown', event => {
-      if (event.key === 'ArrowLeft') showPage(currentIndex - 1, 'back');
-      if (event.key === 'ArrowRight') showPage(currentIndex + 1, 'forward');
+      if (event.key === 'ArrowLeft') showPage(currentIndex - 1, 'back', true);
+      if (event.key === 'ArrowRight') showPage(currentIndex + 1, 'forward', true);
     });
-    showPage(0);
+    window.addEventListener('resize', () => fitStoryText(pages[currentIndex]));
+    showPage(0, 'forward', false);
   </script>
 </body>
 </html>`;
