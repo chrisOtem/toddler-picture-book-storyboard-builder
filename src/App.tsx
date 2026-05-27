@@ -816,24 +816,44 @@ ${exportThemeVars}
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-slate-700 ml-1">輸出繪本色系</label>
-              <select
-                value={colorSchemeId}
-                onChange={event => setColorSchemeId(event.target.value as ColorSchemeId)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-all appearance-none"
-              >
-                {COLOR_SCHEMES.map(scheme => (
-                  <option key={scheme.id} value={scheme.id}>{scheme.label}</option>
-                ))}
-              </select>
-              <div className="flex items-center gap-2 rounded-2xl bg-slate-50 border border-slate-100 p-3">
-                <div className="flex gap-1.5">
-                  {currentColorScheme.swatches.map(color => (
-                    <span key={color} className="h-6 w-6 rounded-full border border-white shadow-sm" style={{ backgroundColor: color }} />
-                  ))}
+            <div className="space-y-3 rounded-2xl border-2 border-amber-200 bg-amber-50/50 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <label className="text-sm font-black text-amber-900 flex items-center gap-2">
+                    <Palette className="w-4 h-4" />
+                    選擇繪本色系
+                  </label>
+                  <p className="mt-1 text-xs leading-relaxed text-amber-700/80">按下面色票按鈕，輸出繪本會跟隨故事氣氛換色。</p>
                 </div>
-                <p className="text-xs leading-relaxed text-slate-500">{currentColorScheme.description}</p>
+                <span className="shrink-0 rounded-full bg-white px-3 py-1 text-[11px] font-black text-amber-700 border border-amber-200">目前：{currentColorScheme.label}</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                {COLOR_SCHEMES.map(scheme => {
+                  const isSelected = colorSchemeId === scheme.id;
+                  return (
+                    <button
+                      key={scheme.id}
+                      type="button"
+                      onClick={() => setColorSchemeId(scheme.id)}
+                      className={`text-left rounded-2xl border-2 p-3 transition-all ${isSelected ? 'border-amber-500 bg-white shadow-md ring-2 ring-amber-200' : 'border-slate-200 bg-white/80 hover:border-amber-300 hover:bg-white'}`}
+                      aria-pressed={isSelected}
+                      aria-label={`選擇色系：${scheme.label}`}
+                    >
+                      <div className="flex items-center gap-1.5 mb-2">
+                        {scheme.swatches.map(color => (
+                          <span key={color} className="h-5 w-5 rounded-full border border-white shadow-sm" style={{ backgroundColor: color }} />
+                        ))}
+                      </div>
+                      <div className="text-xs font-black text-slate-800">{scheme.label}</div>
+                      {isSelected && <div className="mt-1 text-[11px] font-bold text-amber-600">已選擇</div>}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="rounded-2xl bg-white border border-amber-100 p-3">
+                <p className="text-xs leading-relaxed text-slate-600"><span className="font-black text-amber-800">{currentColorScheme.label}：</span>{currentColorScheme.description}</p>
               </div>
             </div>
           </div>
@@ -913,16 +933,38 @@ ${exportThemeVars}
                         <option value="English">English</option>
                         <option value="日本語">日本語</option>
                       </select>
-                      <select
-                        value={story.colorScheme}
-                        onChange={event => updateStoryMeta('colorScheme', event.target.value)}
-                        className="bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                        aria-label="輸出繪本色系"
-                      >
-                        {COLOR_SCHEMES.map(scheme => (
-                          <option key={scheme.id} value={scheme.id}>色系：{scheme.label}</option>
-                        ))}
-                      </select>
+                      <div className="w-full rounded-2xl border-2 border-amber-200 bg-amber-50/60 p-3">
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 text-sm font-black text-amber-900">
+                            <Palette className="w-4 h-4" />
+                            更改輸出色系
+                          </div>
+                          <span className="rounded-full bg-white px-3 py-1 text-[11px] font-black text-amber-700 border border-amber-200">目前：{getColorScheme(story.colorScheme).label}</span>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                          {COLOR_SCHEMES.map(scheme => {
+                            const isSelected = story.colorScheme === scheme.id;
+                            return (
+                              <button
+                                key={scheme.id}
+                                type="button"
+                                onClick={() => updateStoryMeta('colorScheme', scheme.id)}
+                                className={`rounded-xl border-2 p-2 text-left transition-all ${isSelected ? 'border-amber-500 bg-white shadow-md ring-2 ring-amber-200' : 'border-slate-200 bg-white/80 hover:border-amber-300 hover:bg-white'}`}
+                                aria-pressed={isSelected}
+                                aria-label={`更改輸出色系為：${scheme.label}`}
+                              >
+                                <div className="mb-1 flex gap-1">
+                                  {scheme.swatches.map(color => (
+                                    <span key={color} className="h-4 w-4 rounded-full border border-white shadow-sm" style={{ backgroundColor: color }} />
+                                  ))}
+                                </div>
+                                <div className="text-[11px] font-black text-slate-800 leading-tight">{scheme.label}</div>
+                                {isSelected && <div className="mt-1 text-[10px] font-bold text-amber-600">已選擇</div>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
                     </div>
                     <button
                       onClick={addPage}
