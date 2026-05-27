@@ -190,15 +190,11 @@ export default function App() {
         manifestPages.push({
           pageNumber: page.pageNumber,
           storyText: page.storyText,
-          imagePrompt: page.imagePrompt,
-          animationPrompt: page.animationPrompt,
           imageFile: imageSrc || null,
           audioFile: audioSrc || null,
         });
 
         const safeStoryText = escapeHtml(page.storyText).replace(/\n/g, '<br>');
-        const safeImagePrompt = escapeHtml(page.imagePrompt).replace(/\n/g, '<br>');
-        const safeAnimationPrompt = escapeHtml(page.animationPrompt).replace(/\n/g, '<br>');
 
         htmlPages += `
           <section class="page" id="page-${page.pageNumber}">
@@ -210,16 +206,6 @@ export default function App() {
               <h2>故事文本</h2>
               <div class="story-text">${safeStoryText || '<span class="muted">尚未填寫故事文本</span>'}</div>
               ${audioSrc ? `<audio class="audio-player" controls src="${audioSrc}"></audio>` : ''}
-            </div>
-            <div class="prompt-grid">
-              <div>
-                <h3>插圖備註 / 提示詞</h3>
-                <p>${safeImagePrompt || '<span class="muted">未填寫</span>'}</p>
-              </div>
-              <div>
-                <h3>動畫備註 / 提示詞</h3>
-                <p>${safeAnimationPrompt || '<span class="muted">未填寫</span>'}</p>
-              </div>
             </div>
           </section>
         `;
@@ -262,9 +248,6 @@ export default function App() {
             h2, h3 { color: #92400E; margin-top: 0; }
             .story-text { font-size: 1.55rem; line-height: 1.7; font-weight: 500; white-space: normal; }
             .audio-player { width: 100%; max-width: 480px; margin-top: 24px; }
-            .prompt-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; padding: 0 32px 32px; }
-            .prompt-grid div { background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 18px; padding: 20px; }
-            .prompt-grid p { white-space: normal; line-height: 1.6; color: #57534E; }
             .muted { color: #A8A29E; }
           </style>
         </head>
@@ -297,7 +280,7 @@ export default function App() {
           story.pages
             .map(
               page =>
-                `## 第 ${page.pageNumber} 頁\n\n### 故事文本\n\n${page.storyText || '（空白）'}\n\n### 插圖備註 / 提示詞\n\n${page.imagePrompt || '（空白）'}\n\n### 動畫備註 / 提示詞\n\n${page.animationPrompt || '（空白）'}\n`,
+                `## 第 ${page.pageNumber} 頁\n\n### 故事文本\n\n${page.storyText || '（空白）'}\n`,
             )
             .join('\n'),
       );
