@@ -197,72 +197,241 @@ export default function App() {
         const safeStoryText = escapeHtml(page.storyText).replace(/\n/g, '<br>');
 
         htmlPages += `
-          <section class="page" id="page-${page.pageNumber}">
-            <div class="page-header">第 ${page.pageNumber} 頁</div>
-            <div class="image-box">
-              ${imageSrc ? `<img src="${imageSrc}" alt="第 ${page.pageNumber} 頁插圖" />` : '<div class="placeholder">尚未上傳插圖</div>'}
+          <article class="book-page" data-page="${page.pageNumber}">
+            <div class="paper">
+              <div class="illustration-area">
+                ${imageSrc ? `<img src="${imageSrc}" alt="第 ${page.pageNumber} 頁插圖" />` : '<div class="placeholder">尚未上傳插圖</div>'}
+              </div>
+              <div class="story-area">
+                <div class="page-label">第 ${page.pageNumber} 頁</div>
+                <h2>故事文本</h2>
+                <div class="story-text">${safeStoryText || '<span class="muted">尚未填寫故事文本</span>'}</div>
+                ${audioSrc ? `<audio class="audio-player" controls src="${audioSrc}"></audio>` : ''}
+              </div>
             </div>
-            <div class="text-box">
-              <h2>故事文本</h2>
-              <div class="story-text">${safeStoryText || '<span class="muted">尚未填寫故事文本</span>'}</div>
-              ${audioSrc ? `<audio class="audio-player" controls src="${audioSrc}"></audio>` : ''}
-            </div>
-          </section>
+          </article>
         `;
       }
 
       const safeTitle = escapeHtml(story.title || '我的自訂繪本');
       const safeTheme = escapeHtml(story.theme || '自由創作');
+      const pageCount = story.pages.length;
 
-      const htmlContent = `
-        <!DOCTYPE html>
-        <html lang="${story.language.includes('English') ? 'en' : 'zh-Hant'}">
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>${safeTitle}</title>
-          <style>
-            body {
-              font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-              background: #FDFBF7;
-              color: #451A03;
-              margin: 0;
-              padding: 24px;
-            }
-            .book-container { max-width: 960px; margin: 0 auto; }
-            .cover, .page {
-              background: #fff;
-              border-radius: 28px;
-              box-shadow: 0 10px 30px rgba(120, 53, 15, 0.08);
-              margin-bottom: 32px;
-              overflow: hidden;
-            }
-            .cover { text-align: center; padding: 72px 32px; background: #FEF3C7; }
-            .cover h1 { font-size: clamp(2rem, 6vw, 4rem); margin: 0 0 12px; color: #92400E; }
-            .cover p { font-size: 1.25rem; color: #B45309; margin: 8px 0; }
-            .page-header { padding: 20px 28px; font-size: 1.3rem; font-weight: 800; color: #92400E; border-bottom: 1px solid #FDE68A; }
-            .image-box { width: 100%; aspect-ratio: 16 / 9; background: #F3F4F6; display: flex; align-items: center; justify-content: center; }
-            .image-box img { width: 100%; height: 100%; object-fit: cover; display: block; }
-            .placeholder { color: #9CA3AF; font-size: 1.4rem; }
-            .text-box { padding: 32px; text-align: center; }
-            h2, h3 { color: #92400E; margin-top: 0; }
-            .story-text { font-size: 1.55rem; line-height: 1.7; font-weight: 500; white-space: normal; }
-            .audio-player { width: 100%; max-width: 480px; margin-top: 24px; }
-            .muted { color: #A8A29E; }
-          </style>
-        </head>
-        <body>
-          <main class="book-container">
-            <section class="cover">
-              <h1>${safeTitle}</h1>
-              <p>主題：${safeTheme}</p>
-              <p>語言：${escapeHtml(story.language)}</p>
-            </section>
-            ${htmlPages}
-          </main>
-        </body>
-        </html>
-      `;
+      const htmlContent = `<!DOCTYPE html>
+<html lang="${story.language.includes('English') ? 'en' : 'zh-Hant'}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${safeTitle}</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #fffaf0;
+      --paper-edge: #f7d99a;
+      --ink: #78350f;
+      --muted: #a16207;
+      --background: #fdf7e8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(253, 230, 138, 0.55), transparent 34rem),
+        linear-gradient(135deg, #fff7ed 0%, var(--background) 48%, #fff1f2 100%);
+      display: flex;
+      justify-content: center;
+      padding: 28px 16px;
+    }
+    .reader-shell {
+      width: min(1080px, 100%);
+      display: grid;
+      gap: 18px;
+    }
+    .cover-card, .book-stage, .controls {
+      border: 1px solid rgba(217, 119, 6, 0.18);
+      box-shadow: 0 24px 60px rgba(120, 53, 15, 0.12);
+    }
+    .cover-card {
+      background: rgba(255, 251, 235, 0.86);
+      backdrop-filter: blur(10px);
+      border-radius: 28px;
+      padding: 24px clamp(20px, 4vw, 48px);
+      text-align: center;
+    }
+    .cover-card h1 {
+      margin: 0 0 10px;
+      font-size: clamp(2rem, 6vw, 4.25rem);
+      line-height: 1.08;
+      letter-spacing: 0.04em;
+      color: #92400e;
+    }
+    .cover-card p { margin: 6px 0; color: var(--muted); font-weight: 700; }
+    .book-stage {
+      position: relative;
+      min-height: 72vh;
+      background: linear-gradient(90deg, rgba(146, 64, 14, 0.08), transparent 8%, transparent 92%, rgba(146, 64, 14, 0.08)), #fffdf7;
+      border-radius: 34px;
+      overflow: hidden;
+      perspective: 1600px;
+    }
+    .book-page {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      transform: rotateY(18deg) translateX(42px) scale(0.975);
+      transform-origin: left center;
+      transition: opacity 360ms ease, transform 520ms ease;
+      pointer-events: none;
+      padding: clamp(18px, 3vw, 40px);
+    }
+    .book-page.active {
+      opacity: 1;
+      transform: rotateY(0deg) translateX(0) scale(1);
+      pointer-events: auto;
+      z-index: 2;
+    }
+    .book-page.turning-back { transform-origin: right center; }
+    .paper {
+      width: 100%;
+      height: 100%;
+      min-height: calc(72vh - 80px);
+      background: var(--paper);
+      border: 1px solid var(--paper-edge);
+      border-radius: 26px;
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: minmax(280px, 1fr) auto;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7), 0 20px 45px rgba(120, 53, 15, 0.1);
+    }
+    .illustration-area {
+      background: #f8fafc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 280px;
+    }
+    .illustration-area img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      background: white;
+    }
+    .placeholder { color: #b45309; font-size: clamp(1.2rem, 3vw, 2rem); font-weight: 800; opacity: 0.55; }
+    .story-area {
+      text-align: center;
+      padding: clamp(22px, 4vw, 42px);
+      background: linear-gradient(180deg, #ffffff 0%, #fffaf0 100%);
+      border-top: 1px solid rgba(217, 119, 6, 0.16);
+    }
+    .page-label {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 92px;
+      padding: 7px 14px;
+      border-radius: 999px;
+      background: #fef3c7;
+      color: #92400e;
+      font-weight: 900;
+      margin-bottom: 12px;
+    }
+    h2 { color: #92400e; margin: 0 0 18px; font-size: clamp(1.2rem, 2.8vw, 1.65rem); }
+    .story-text {
+      max-width: 760px;
+      margin: 0 auto;
+      font-size: clamp(1.35rem, 3.8vw, 2.25rem);
+      line-height: 1.75;
+      font-weight: 650;
+      color: #451a03;
+      word-break: break-word;
+    }
+    .audio-player { width: min(520px, 100%); margin-top: 26px; }
+    .muted { color: #a8a29e; }
+    .controls {
+      background: rgba(255, 251, 235, 0.92);
+      border-radius: 999px;
+      padding: 12px;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 10px;
+      align-items: center;
+    }
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 14px 22px;
+      font-size: 1rem;
+      font-weight: 900;
+      color: white;
+      background: #d97706;
+      cursor: pointer;
+      box-shadow: 0 8px 18px rgba(217, 119, 6, 0.22);
+    }
+    button:disabled { background: #fcd34d; cursor: not-allowed; box-shadow: none; }
+    .page-status { text-align: center; color: #92400e; font-weight: 900; min-width: 120px; }
+    @media (max-width: 720px) {
+      body { padding: 14px 10px; }
+      .book-stage { min-height: 74vh; border-radius: 24px; }
+      .book-page { padding: 12px; }
+      .paper { min-height: calc(74vh - 24px); grid-template-rows: minmax(220px, 0.95fr) auto; border-radius: 20px; }
+      .story-area { padding: 22px 16px 28px; }
+      .controls { grid-template-columns: 1fr; border-radius: 24px; }
+      .page-status { order: -1; }
+    }
+  </style>
+</head>
+<body>
+  <main class="reader-shell">
+    <section class="cover-card" aria-label="繪本封面資料">
+      <h1>${safeTitle}</h1>
+      <p>主題：${safeTheme}</p>
+      <p>語言：${escapeHtml(story.language)}</p>
+    </section>
+
+    <section class="book-stage" aria-label="翻頁式繪本閱讀器">
+      ${htmlPages}
+    </section>
+
+    <nav class="controls" aria-label="翻頁控制">
+      <button type="button" id="prevPage">上一頁</button>
+      <div class="page-status"><span id="currentPage">1</span> / ${pageCount}</div>
+      <button type="button" id="nextPage">下一頁</button>
+    </nav>
+  </main>
+
+  <script>
+    const pages = Array.from(document.querySelectorAll('.book-page'));
+    const prevButton = document.getElementById('prevPage');
+    const nextButton = document.getElementById('nextPage');
+    const currentPageLabel = document.getElementById('currentPage');
+    let currentIndex = 0;
+
+    function showPage(nextIndex, direction = 'forward') {
+      if (!pages.length) return;
+      currentIndex = Math.max(0, Math.min(nextIndex, pages.length - 1));
+      pages.forEach((page, index) => {
+        page.classList.toggle('active', index === currentIndex);
+        page.classList.toggle('turning-back', direction === 'back');
+      });
+      currentPageLabel.textContent = String(currentIndex + 1);
+      prevButton.disabled = currentIndex === 0;
+      nextButton.disabled = currentIndex === pages.length - 1;
+    }
+
+    prevButton.addEventListener('click', () => showPage(currentIndex - 1, 'back'));
+    nextButton.addEventListener('click', () => showPage(currentIndex + 1, 'forward'));
+    document.addEventListener('keydown', event => {
+      if (event.key === 'ArrowLeft') showPage(currentIndex - 1, 'back');
+      if (event.key === 'ArrowRight') showPage(currentIndex + 1, 'forward');
+    });
+    showPage(0);
+  </script>
+</body>
+</html>`;
 
       const storyboardData = {
         title: story.title,
@@ -289,7 +458,7 @@ export default function App() {
       const url = URL.createObjectURL(zipBlob);
       const anchor = document.createElement('a');
       anchor.href = url;
-      anchor.download = `${story.title || '繪本'}-storyboard.zip`;
+      anchor.download = `${story.title || '繪本'}-flipbook.zip`;
       document.body.appendChild(anchor);
       anchor.click();
       document.body.removeChild(anchor);
