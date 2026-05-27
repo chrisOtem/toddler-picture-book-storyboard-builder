@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookOpen, Loader2, Baby, Palette, Clapperboard, AudioLines, Pencil, Upload, Download, Plus, Trash2 } from 'lucide-react';
+import { BookOpen, Loader2, Baby, Palette, AudioLines, Pencil, Upload, Download, Plus, Trash2 } from 'lucide-react';
 import JSZip from 'jszip';
 
 interface Page {
@@ -197,16 +197,14 @@ export default function App() {
         const safeStoryText = escapeHtml(page.storyText).replace(/\n/g, '<br>');
 
         htmlPages += `
-          <article class="book-page" data-page="${page.pageNumber}">
-            <div class="paper">
+          <article class="book-page story-page" data-page="${page.pageNumber}">
+            <div class="paper story-paper">
               <div class="illustration-area">
                 ${imageSrc ? `<img src="${imageSrc}" alt="第 ${page.pageNumber} 頁插圖" />` : '<div class="placeholder">尚未上傳插圖</div>'}
               </div>
               <div class="story-area">
-                <div class="page-label">第 ${page.pageNumber} 頁</div>
-                <h2>故事文本</h2>
                 <div class="story-text">${safeStoryText || '<span class="muted">尚未填寫故事文本</span>'}</div>
-                ${audioSrc ? `<audio class="audio-player" controls src="${audioSrc}"></audio>` : ''}
+                ${audioSrc ? `<audio class="audio-player" controls preload="metadata" src="${audioSrc}"></audio>` : '<div class="audio-missing">本頁未上傳配音</div>'}
               </div>
             </div>
           </article>
@@ -215,7 +213,8 @@ export default function App() {
 
       const safeTitle = escapeHtml(story.title || '我的自訂繪本');
       const safeTheme = escapeHtml(story.theme || '自由創作');
-      const pageCount = story.pages.length;
+      const contentPageCount = story.pages.length;
+      const totalSlides = contentPageCount + 1;
 
       const htmlContent = `<!DOCTYPE html>
 <html lang="${story.language.includes('English') ? 'en' : 'zh-Hant'}">
@@ -226,8 +225,8 @@ export default function App() {
   <style>
     :root {
       color-scheme: light;
-      --paper: #fffaf0;
-      --paper-edge: #f7d99a;
+      --paper: #fffdf6;
+      --paper-edge: #f4d99b;
       --ink: #78350f;
       --muted: #a16207;
       --background: #fdf7e8;
@@ -243,36 +242,21 @@ export default function App() {
         linear-gradient(135deg, #fff7ed 0%, var(--background) 48%, #fff1f2 100%);
       display: flex;
       justify-content: center;
-      padding: 28px 16px;
+      padding: 22px 14px;
     }
     .reader-shell {
-      width: min(1080px, 100%);
+      width: min(1180px, 100%);
       display: grid;
-      gap: 18px;
+      gap: 14px;
     }
-    .cover-card, .book-stage, .controls {
+    .book-stage, .controls {
       border: 1px solid rgba(217, 119, 6, 0.18);
       box-shadow: 0 24px 60px rgba(120, 53, 15, 0.12);
     }
-    .cover-card {
-      background: rgba(255, 251, 235, 0.86);
-      backdrop-filter: blur(10px);
-      border-radius: 28px;
-      padding: 24px clamp(20px, 4vw, 48px);
-      text-align: center;
-    }
-    .cover-card h1 {
-      margin: 0 0 10px;
-      font-size: clamp(2rem, 6vw, 4.25rem);
-      line-height: 1.08;
-      letter-spacing: 0.04em;
-      color: #92400e;
-    }
-    .cover-card p { margin: 6px 0; color: var(--muted); font-weight: 700; }
     .book-stage {
       position: relative;
-      min-height: 72vh;
-      background: linear-gradient(90deg, rgba(146, 64, 14, 0.08), transparent 8%, transparent 92%, rgba(146, 64, 14, 0.08)), #fffdf7;
+      min-height: 82vh;
+      background: linear-gradient(90deg, rgba(146, 64, 14, 0.08), transparent 7%, transparent 93%, rgba(146, 64, 14, 0.08)), #fffdf7;
       border-radius: 34px;
       overflow: hidden;
       perspective: 1600px;
@@ -285,7 +269,7 @@ export default function App() {
       transform-origin: left center;
       transition: opacity 360ms ease, transform 520ms ease;
       pointer-events: none;
-      padding: clamp(18px, 3vw, 40px);
+      padding: clamp(14px, 2.4vw, 30px);
     }
     .book-page.active {
       opacity: 1;
@@ -297,21 +281,44 @@ export default function App() {
     .paper {
       width: 100%;
       height: 100%;
-      min-height: calc(72vh - 80px);
+      min-height: calc(82vh - 60px);
       background: var(--paper);
       border: 1px solid var(--paper-edge);
-      border-radius: 26px;
+      border-radius: 28px;
       overflow: hidden;
-      display: grid;
-      grid-template-rows: minmax(280px, 1fr) auto;
       box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7), 0 20px 45px rgba(120, 53, 15, 0.1);
     }
+    .cover-paper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: clamp(28px, 6vw, 78px);
+      background:
+        radial-gradient(circle at 18% 22%, rgba(251, 191, 36, 0.32), transparent 18rem),
+        radial-gradient(circle at 84% 72%, rgba(251, 146, 60, 0.22), transparent 18rem),
+        #fff7d6;
+    }
+    .cover-paper h1 {
+      margin: 0 0 20px;
+      font-size: clamp(2.8rem, 9vw, 6.7rem);
+      line-height: 1.05;
+      letter-spacing: 0.04em;
+      color: #92400e;
+    }
+    .cover-paper p { margin: 8px 0; color: var(--muted); font-size: clamp(1rem, 2.4vw, 1.45rem); font-weight: 800; }
+    .story-paper {
+      display: grid;
+      grid-template-rows: minmax(0, 74%) minmax(150px, 26%);
+    }
     .illustration-area {
-      background: #f8fafc;
+      background: #fff;
       display: flex;
       align-items: center;
       justify-content: center;
-      min-height: 280px;
+      min-height: 0;
+      overflow: hidden;
     }
     .illustration-area img {
       width: 100%;
@@ -320,36 +327,29 @@ export default function App() {
       display: block;
       background: white;
     }
-    .placeholder { color: #b45309; font-size: clamp(1.2rem, 3vw, 2rem); font-weight: 800; opacity: 0.55; }
+    .placeholder { color: #b45309; font-size: clamp(1.35rem, 3vw, 2.2rem); font-weight: 900; opacity: 0.55; }
     .story-area {
       text-align: center;
-      padding: clamp(22px, 4vw, 42px);
+      padding: clamp(16px, 2.6vw, 30px) clamp(18px, 4vw, 58px);
       background: linear-gradient(180deg, #ffffff 0%, #fffaf0 100%);
       border-top: 1px solid rgba(217, 119, 6, 0.16);
-    }
-    .page-label {
-      display: inline-flex;
-      align-items: center;
+      display: flex;
+      flex-direction: column;
       justify-content: center;
-      min-width: 92px;
-      padding: 7px 14px;
-      border-radius: 999px;
-      background: #fef3c7;
-      color: #92400e;
-      font-weight: 900;
-      margin-bottom: 12px;
+      align-items: center;
+      gap: 14px;
     }
-    h2 { color: #92400e; margin: 0 0 18px; font-size: clamp(1.2rem, 2.8vw, 1.65rem); }
     .story-text {
-      max-width: 760px;
+      max-width: 900px;
       margin: 0 auto;
-      font-size: clamp(1.35rem, 3.8vw, 2.25rem);
-      line-height: 1.75;
+      font-size: clamp(1.28rem, 3.3vw, 2.2rem);
+      line-height: 1.55;
       font-weight: 650;
       color: #451a03;
       word-break: break-word;
     }
-    .audio-player { width: min(520px, 100%); margin-top: 26px; }
+    .audio-player { width: min(520px, 100%); height: 40px; }
+    .audio-missing { color: #d6a75d; font-size: 0.95rem; font-weight: 700; }
     .muted { color: #a8a29e; }
     .controls {
       background: rgba(255, 251, 235, 0.92);
@@ -372,13 +372,14 @@ export default function App() {
       box-shadow: 0 8px 18px rgba(217, 119, 6, 0.22);
     }
     button:disabled { background: #fcd34d; cursor: not-allowed; box-shadow: none; }
-    .page-status { text-align: center; color: #92400e; font-weight: 900; min-width: 120px; }
+    .page-status { text-align: center; color: #92400e; font-weight: 900; min-width: 160px; }
     @media (max-width: 720px) {
-      body { padding: 14px 10px; }
-      .book-stage { min-height: 74vh; border-radius: 24px; }
-      .book-page { padding: 12px; }
-      .paper { min-height: calc(74vh - 24px); grid-template-rows: minmax(220px, 0.95fr) auto; border-radius: 20px; }
-      .story-area { padding: 22px 16px 28px; }
+      body { padding: 10px 8px; }
+      .book-stage { min-height: 80vh; border-radius: 24px; }
+      .book-page { padding: 10px; }
+      .paper { min-height: calc(80vh - 20px); border-radius: 20px; }
+      .story-paper { grid-template-rows: minmax(0, 70%) minmax(160px, 30%); }
+      .story-area { padding: 18px 14px 22px; }
       .controls { grid-template-columns: 1fr; border-radius: 24px; }
       .page-status { order: -1; }
     }
@@ -386,19 +387,20 @@ export default function App() {
 </head>
 <body>
   <main class="reader-shell">
-    <section class="cover-card" aria-label="繪本封面資料">
-      <h1>${safeTitle}</h1>
-      <p>主題：${safeTheme}</p>
-      <p>語言：${escapeHtml(story.language)}</p>
-    </section>
-
     <section class="book-stage" aria-label="翻頁式繪本閱讀器">
+      <article class="book-page cover-page" data-page="cover">
+        <div class="paper cover-paper">
+          <h1>${safeTitle}</h1>
+          <p>${safeTheme}</p>
+          <p>${escapeHtml(story.language)}</p>
+        </div>
+      </article>
       ${htmlPages}
     </section>
 
     <nav class="controls" aria-label="翻頁控制">
       <button type="button" id="prevPage">上一頁</button>
-      <div class="page-status"><span id="currentPage">1</span> / ${pageCount}</div>
+      <div class="page-status"><span id="currentPage">1</span> / ${totalSlides}</div>
       <button type="button" id="nextPage">下一頁</button>
     </nav>
   </main>
@@ -449,7 +451,7 @@ export default function App() {
           story.pages
             .map(
               page =>
-                `## 第 ${page.pageNumber} 頁\n\n### 故事文本\n\n${page.storyText || '（空白）'}\n`,
+                `## 第 ${page.pageNumber} 頁\n\n${page.storyText || '（空白）'}\n`,
             )
             .join('\n'),
       );
@@ -555,7 +557,7 @@ export default function App() {
           </button>
 
           <div className="text-xs leading-relaxed text-slate-500 bg-amber-50 border border-amber-100 rounded-2xl p-4">
-            此版本為純手動工作流，不需要任何外部金鑰或自動生成服務。你可以手動輸入故事、插圖備註、動畫備註，並上傳圖片及音訊後匯出 ZIP。
+            此版本為純手動工作流，不需要任何外部金鑰或自動生成服務。你可以手動輸入故事文本，並上傳插圖及配音後匯出 ZIP。
           </div>
         </aside>
 
@@ -685,34 +687,20 @@ export default function App() {
                       <div className="space-y-6">
                         <section>
                           <h4 className="flex items-center justify-between gap-2 text-sm font-bold text-purple-600 uppercase tracking-wider mb-3">
-                            <span className="flex items-center gap-2"><Palette size={18} /> 插圖素材 / 備註</span>
+                            <span className="flex items-center gap-2"><Palette size={18} /> 插圖素材</span>
                           </h4>
-                          {page.imageUrl && (
+                          {page.imageUrl ? (
                             <div className="mb-4 space-y-2">
                               <img src={page.imageUrl} alt={`Page ${page.pageNumber}`} className="w-full h-auto aspect-video object-cover rounded-2xl shadow-sm border border-slate-100" />
                               <button onClick={() => clearImage(index)} className="text-xs font-bold text-purple-700 hover:underline">
                                 移除插圖
                               </button>
                             </div>
+                          ) : (
+                            <div className="min-h-[220px] rounded-2xl border-2 border-dashed border-purple-100 bg-purple-50/40 flex items-center justify-center text-sm font-bold text-purple-300">
+                              尚未上傳插圖
+                            </div>
                           )}
-                          <textarea
-                            value={page.imagePrompt}
-                            onChange={event => updatePage(index, { imagePrompt: event.target.value })}
-                            placeholder="填寫插圖說明、構圖、角色外觀、畫面需求或外部繪圖備註。"
-                            className="w-full bg-slate-50 text-slate-600 p-4 rounded-xl text-sm leading-relaxed border border-slate-100 focus:ring-2 focus:ring-purple-400 outline-none resize-y min-h-[120px]"
-                          />
-                        </section>
-
-                        <section>
-                          <h4 className="flex items-center gap-2 text-sm font-bold text-blue-600 uppercase tracking-wider mb-3">
-                            <Clapperboard size={18} /> 動畫備註 / 分鏡提示
-                          </h4>
-                          <textarea
-                            value={page.animationPrompt}
-                            onChange={event => updatePage(index, { animationPrompt: event.target.value })}
-                            placeholder="填寫鏡頭移動、角色動作、畫面節奏或後續動畫製作備註。"
-                            className="w-full bg-blue-50/50 text-blue-900 p-4 rounded-xl text-sm leading-relaxed border border-blue-100 focus:ring-2 focus:ring-blue-400 outline-none resize-y min-h-[120px]"
-                          />
                         </section>
                       </div>
                     </div>
