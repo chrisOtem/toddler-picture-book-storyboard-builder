@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookOpen, Loader2, Baby, Palette, AudioLines, Pencil, Upload, Download, Plus, Trash2 } from 'lucide-react';
+import { BookOpen, Loader2, Baby, Palette, AudioLines, Pencil, Upload, Download, Plus, Trash2, Video, Image as ImageIcon } from 'lucide-react';
 import JSZip from 'jszip';
 
 type ColorSchemeId = 'sunshine' | 'bedtime' | 'forest' | 'ocean' | 'candy' | 'lavender';
@@ -212,6 +212,7 @@ interface Page {
   animationPrompt: string;
   imageUrl?: string;
   audioUrl?: string;
+  videoUrl?: string;
 }
 
 interface StoryBook {
@@ -253,6 +254,10 @@ const getExtensionFromBlob = (blob: Blob, fallback: string) => {
     'audio/ogg': 'ogg',
     'audio/webm': 'webm',
     'audio/mp4': 'm4a',
+    'video/mp4': 'mp4',
+    'video/webm': 'webm',
+    'video/ogg': 'ogv',
+    'video/quicktime': 'mov',
   };
 
   return mimeMap[blob.type] || fallback;
@@ -347,9 +352,22 @@ export default function App() {
     reader.readAsDataURL(file);
   };
 
+  const handleVideoUpload = (pageIndex: number, event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = loadEvent => {
+      updatePage(pageIndex, { videoUrl: loadEvent.target?.result as string });
+    };
+    reader.readAsDataURL(file);
+  };
+
   const clearImage = (pageIndex: number) => updatePage(pageIndex, { imageUrl: undefined });
 
   const clearAudio = (pageIndex: number) => updatePage(pageIndex, { audioUrl: undefined });
+
+  const clearVideo = (pageIndex: number) => updatePage(pageIndex, { videoUrl: undefined });
 
   const exportToZip = async () => {
     if (!story) return;
@@ -359,6 +377,7 @@ export default function App() {
       const zip = new JSZip();
       const imageFolder = zip.folder('images');
       const audioFolder = zip.folder('audio');
+      const videoFolder = zip.folder('videos');
       const storyboardFolder = zip.folder('storyboard');
       const manifestPages = [];
       let htmlPages = '';
@@ -366,6 +385,7 @@ export default function App() {
       for (const page of story.pages) {
         let imageSrc = '';
         let audioSrc = '';
+        let videoSrc = '';
 
         if (page.imageUrl) {
           try {
@@ -393,11 +413,25 @@ export default function App() {
           }
         }
 
+        if (page.videoUrl) {
+          try {
+            const response = await fetch(page.videoUrl);
+            const blob = await response.blob();
+            const extension = getExtensionFromBlob(blob, 'mp4');
+            const filename = `page-${page.pageNumber}.${extension}`;
+            videoFolder?.file(filename, blob);
+            videoSrc = `./videos/${filename}`;
+          } catch (packagingError) {
+            console.error('Failed to package video for page', page.pageNumber, packagingError);
+          }
+        }
+
         manifestPages.push({
           pageNumber: page.pageNumber,
           storyText: page.storyText,
           imageFile: imageSrc || null,
           audioFile: audioSrc || null,
+          videoFile: videoSrc || null,
         });
 
         const safeStoryText = escapeHtml(page.storyText).replace(/\n/g, '<br>');
@@ -405,8 +439,9 @@ export default function App() {
         htmlPages += `
           <article class="book-page story-page" data-page="${page.pageNumber}">
             <div class="paper story-paper">
-              <div class="illustration-area">
-                ${imageSrc ? `<img src="${imageSrc}" alt="第 ${page.pageNumber} 頁插圖" />` : '<div class="placeholder">尚未上傳插圖</div>'}
+              <div class="illustration-area" data-has-image="${imageSrc ? 'true' : 'false'}" data-has-video="${videoSrc ? 'true' : 'false'}">
+                <div class="media-layer image-layer active">${imageSrc ? `<img src="${imageSrc}" alt="第 ${page.pageNumber} 頁插圖" />` : '<div class="placeholder">尚未上傳插圖</div>'}</div>
+                <div class="media-layer video-layer">${videoSrc ? `<video class="page-video" controls preload="metadata" playsinline src="${videoSrc}"></video>` : '<div class="placeholder">本頁未上傳短片</div>'}</div>
               </div>
               <div class="story-area">
                 <div class="story-text">${safeStoryText || '<span class="muted">尚未填寫故事文本</span>'}</div>
@@ -518,20 +553,28 @@ ${exportThemeVars}
       grid-template-rows: minmax(0, 76%) minmax(130px, 24%);
     }
     .illustration-area {
+      position: relative;
       background: #fff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       min-height: 0;
       overflow: hidden;
     }
-    .illustration-area img {
+    .media-layer {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: white;
+    }
+    .media-layer.active { display: flex; }
+    .illustration-area img, .illustration-area video {
       width: 100%;
       height: 100%;
       object-fit: contain;
       display: block;
       background: white;
     }
+    .illustration-area video { background: #050505; }
     .placeholder { color: var(--muted); font-size: clamp(1.35rem, 3vw, 2.2rem); font-weight: 900; opacity: 0.55; }
     .story-area {
       text-align: center;
@@ -570,7 +613,7 @@ ${exportThemeVars}
       border-radius: 999px;
       padding: 12px;
       display: grid;
-      grid-template-columns: 1fr auto 1fr;
+      grid-template-columns: 1fr auto auto 1fr;
       gap: 10px;
       align-items: center;
     }
@@ -586,7 +629,9 @@ ${exportThemeVars}
       box-shadow: 0 8px 18px rgba(217, 119, 6, 0.22);
     }
     button:disabled { background: var(--accent-soft); cursor: not-allowed; box-shadow: none; }
-    .page-status { text-align: center; color: var(--accent-strong); font-weight: 900; min-width: 160px; }
+    .page-status { text-align: center; color: var(--accent-strong); font-weight: 900; min-width: 120px; }
+    .media-toggle { background: var(--accent-strong); min-width: 150px; }
+    .media-toggle.unavailable { opacity: 0.48; cursor: not-allowed; }
     @media (max-width: 720px) {
       body { padding: 10px 8px; }
       .book-stage { min-height: 80vh; border-radius: 24px; }
@@ -596,7 +641,8 @@ ${exportThemeVars}
       .story-area { padding: 12px 12px 16px; }
       .story-text { font-size: clamp(0.9rem, 4.2vw, 1.18rem); line-height: 1.36; }
       .controls { grid-template-columns: 1fr; border-radius: 24px; }
-      .page-status { order: -1; }
+      .page-status { order: -2; }
+      .media-toggle { order: -1; width: 100%; }
     }
   </style>
 </head>
@@ -617,6 +663,7 @@ ${exportThemeVars}
     <nav class="controls" aria-label="翻頁控制">
       <button type="button" id="prevPage">上一頁</button>
       <div class="page-status"><span id="currentPage">1</span> / ${totalSlides}</div>
+      <button type="button" id="mediaToggle" class="media-toggle">切換短片</button>
       <button type="button" id="nextPage">下一頁</button>
     </nav>
   </main>
@@ -625,13 +672,39 @@ ${exportThemeVars}
     const pages = Array.from(document.querySelectorAll('.book-page'));
     const prevButton = document.getElementById('prevPage');
     const nextButton = document.getElementById('nextPage');
+    const mediaToggleButton = document.getElementById('mediaToggle');
     const currentPageLabel = document.getElementById('currentPage');
     let currentIndex = 0;
+    let mediaMode = 'image';
 
     function pauseAllAudio() {
       document.querySelectorAll('audio').forEach(audio => {
         audio.pause();
       });
+    }
+
+    function pauseAllVideos() {
+      document.querySelectorAll('video').forEach(video => {
+        video.pause();
+      });
+    }
+
+    function updateMediaDisplay(page) {
+      const imageLayer = page.querySelector('.image-layer');
+      const videoLayer = page.querySelector('.video-layer');
+      const mediaArea = page.querySelector('.illustration-area');
+      const hasVideo = mediaArea?.dataset.hasVideo === 'true';
+      const showVideo = mediaMode === 'video' && hasVideo;
+
+      imageLayer?.classList.toggle('active', !showVideo);
+      videoLayer?.classList.toggle('active', showVideo);
+      mediaToggleButton.textContent = showVideo ? '切換圖片' : '切換短片';
+      mediaToggleButton.classList.toggle('unavailable', !hasVideo);
+      mediaToggleButton.disabled = !hasVideo;
+
+      if (!showVideo) {
+        page.querySelectorAll('video').forEach(video => video.pause());
+      }
     }
 
     function fitStoryText(page) {
@@ -677,6 +750,8 @@ ${exportThemeVars}
       if (!pages.length) return;
       currentIndex = Math.max(0, Math.min(nextIndex, pages.length - 1));
       pauseAllAudio();
+      pauseAllVideos();
+      mediaMode = 'image';
       pages.forEach((page, index) => {
         page.classList.toggle('active', index === currentIndex);
         page.classList.toggle('turning-back', direction === 'back');
@@ -688,12 +763,22 @@ ${exportThemeVars}
       const activePage = pages[currentIndex];
       window.requestAnimationFrame(() => {
         fitStoryText(activePage);
+        updateMediaDisplay(activePage);
         if (shouldTryAudio) playPageAudio(activePage);
       });
     }
 
     prevButton.addEventListener('click', () => showPage(currentIndex - 1, 'back', true));
     nextButton.addEventListener('click', () => showPage(currentIndex + 1, 'forward', true));
+    mediaToggleButton.addEventListener('click', () => {
+      const activePage = pages[currentIndex];
+      if (!activePage || activePage.classList.contains('cover-page')) return;
+      const mediaArea = activePage.querySelector('.illustration-area');
+      if (mediaArea?.dataset.hasVideo !== 'true') return;
+      mediaMode = mediaMode === 'video' ? 'image' : 'video';
+      updateMediaDisplay(activePage);
+      if (mediaMode === 'video') pauseAllAudio();
+    });
     document.addEventListener('keydown', event => {
       if (event.key === 'ArrowLeft') showPage(currentIndex - 1, 'back', true);
       if (event.key === 'ArrowRight') showPage(currentIndex + 1, 'forward', true);
@@ -999,6 +1084,11 @@ ${exportThemeVars}
                           上傳插圖
                           <input type="file" accept="image/*" className="hidden" onChange={event => handleImageUpload(index, event)} />
                         </label>
+                        <label className="text-xs font-bold text-sky-600 hover:bg-sky-100 px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer bg-sky-50 border border-sky-100">
+                          <Upload size={14} />
+                          上傳短片
+                          <input type="file" accept="video/*" className="hidden" onChange={event => handleVideoUpload(index, event)} />
+                        </label>
                         <button
                           onClick={() => removePage(index)}
                           disabled={story.pages.length <= 1}
@@ -1037,7 +1127,7 @@ ${exportThemeVars}
                       <div className="space-y-6">
                         <section>
                           <h4 className="flex items-center justify-between gap-2 text-sm font-bold text-purple-600 uppercase tracking-wider mb-3">
-                            <span className="flex items-center gap-2"><Palette size={18} /> 插圖素材</span>
+                            <span className="flex items-center gap-2"><ImageIcon size={18} /> 插圖素材</span>
                           </h4>
                           {page.imageUrl ? (
                             <div className="mb-4 space-y-2">
@@ -1049,6 +1139,24 @@ ${exportThemeVars}
                           ) : (
                             <div className="min-h-[220px] rounded-2xl border-2 border-dashed border-purple-100 bg-purple-50/40 flex items-center justify-center text-sm font-bold text-purple-300">
                               尚未上傳插圖
+                            </div>
+                          )}
+                        </section>
+
+                        <section>
+                          <h4 className="flex items-center justify-between gap-2 text-sm font-bold text-sky-600 uppercase tracking-wider mb-3">
+                            <span className="flex items-center gap-2"><Video size={18} /> 短片素材</span>
+                          </h4>
+                          {page.videoUrl ? (
+                            <div className="mb-4 space-y-2">
+                              <video controls src={page.videoUrl} className="w-full h-auto aspect-video object-contain rounded-2xl shadow-sm border border-slate-100 bg-black" />
+                              <button onClick={() => clearVideo(index)} className="text-xs font-bold text-sky-700 hover:underline">
+                                移除短片
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="min-h-[160px] rounded-2xl border-2 border-dashed border-sky-100 bg-sky-50/40 flex items-center justify-center text-sm font-bold text-sky-300">
+                              尚未上傳短片
                             </div>
                           )}
                         </section>
